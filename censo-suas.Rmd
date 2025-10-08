@@ -1,0 +1,47 @@
+---
+title: "Análise Geral"
+author: "Marcelo GG"
+date: "2025-10-08"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+
+
+
+library("readr")
+
+CRAS_2024_DADOSGERAIS <- read_delim("dados/2024/CRAS-2024-DADOSGERAIS.csv", 
+                                    delim = ";", escape_double = FALSE, locale = locale(encoding = "ISO-8859-1"), 
+                                    trim_ws = TRUE)
+  
+CRAS_2024_RH <- read_delim("dados/2024/CRAS-2024-RH.csv", 
+                          delim = ";", escape_double = FALSE, locale = locale(encoding = "ISO-8859-1"), 
+                          trim_ws = TRUE)
+
+formatarNumeroInteiro <- function(n){
+  
+  format(n, big.mark = ".", decimal.mark = ",", nsmall = 0)
+
+}
+
+```
+
+## CENSO SUAS
+
+Quantidade de CRAS 2024:
+```{r cras-quantidade}
+
+formatarNumeroInteiro(nrow(CRAS_2024_DADOSGERAIS))
+
+```
+
+Quantidade de Profissionais 2024:
+```{r cras-quantidade-rh}
+
+formatarNumeroInteiro(nrow(CRAS_2024_RH))
+
+```
