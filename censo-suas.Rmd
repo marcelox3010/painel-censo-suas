@@ -9,10 +9,8 @@ output:
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
-
-
-
 library("readr")
+library("ggplot2")
 
 CRAS_2024_DADOSGERAIS <- read_delim("dados/2024/CRAS-2024-DADOSGERAIS.csv", 
                                     delim = ";", escape_double = FALSE, locale = locale(encoding = "ISO-8859-1"), 
@@ -33,15 +31,27 @@ formatarNumeroInteiro <- function(n){
 ## CENSO SUAS
 
 Quantidade de CRAS 2024:
-```{r cras-quantidade}
+```{r cras-quantidade, echo=FALSE}
 
 formatarNumeroInteiro(nrow(CRAS_2024_DADOSGERAIS))
 
 ```
 
 Quantidade de Profissionais 2024:
-```{r cras-quantidade-rh}
+```{r cras-quantidade-rh, echo=FALSE}
 
 formatarNumeroInteiro(nrow(CRAS_2024_RH))
+
+```
+
+Quantidade de CRAS por Estado:
+```{r cras-quantidade-cras-estado, echo=FALSE}
+
+dados <- as.data.frame(table(CRAS_2024_DADOSGERAIS$q0_10))
+dados
+ggplot(data = dados, aes(x = Var1, y = Freq)) +
+  geom_text(aes(label = formatarNumeroInteiro(Freq)), vjust = -0.5, size = 2.5) +
+  labs(x = "Estados", y = "Qtd. CRAS", title = "CRAS x Estados") +
+  geom_col() 
 
 ```
