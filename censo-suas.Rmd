@@ -10,12 +10,42 @@ output:
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
 library("readr")
+library("dplyr")
 library("ggplot2")
+
+df_regioes <- data.frame(
+  codigo_ibge_regiao =  c(1, 2, 3, 4, 5),
+  nome_regiao = c("Norte", "Nordeste", "Sudeste", "Sul", "Centro-Oeste"),
+  cor_hex = c(
+  "#228B22",  # Verde (Norte)
+  "#FFD700",  # Dourado (Nordeste)
+  "#4169E1",  # Azul (Sudeste)
+  "#B22222",  # Vermelho/Bordô (Sul)
+  "#FF8C00"   # Laranja (Centro-Oeste)
+  )
+)
+
+codigos_ibge <- c(11, 12, 13, 14, 15, 16, 17, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31, 32, 33, 35, 41, 42, 43, 50, 51, 52, 53)
+nomes_estados <- c("Rondônia", "Acre", "Amazonas", "Roraima", "Pará", "Amapá", "Tocantins", "Maranhão", "Piauí", "Ceará", "Rio Grande do Norte", "Paraíba", "Pernambuco", "Alagoas", "Sergipe", "Bahia", "Minas Gerais", "Espírito Santo", "Rio de Janeiro", "São Paulo", "Paraná", "Santa Catarina", "Rio Grande do Sul", "Mato Grosso do Sul", "Mato Grosso", "Goiás", "Distrito Federal")
+siglas_estados <- c("RO", "AC", "AM", "RR", "PA", "AP", "TO", "MA", "PI", "CE", "RN", "PB", "PE", "AL", "SE", "BA", "MG", "ES", "RJ", "SP", "PR", "SC", "RS", "MS", "MT", "GO", "DF")
+
+df_estados <- data.frame(
+  codigo_ibge_estado = codigos_ibge,
+  nome = nomes_estados,
+  sigla = siglas_estados
+)
+df_estados$codigo_ibge_regiao <- trunc(df_estados$codigo_ibge_estado/10)
+
+rm(codigos_ibge,nomes_estados,siglas_estados)
+
 
 CRAS_2024_DADOSGERAIS <- read_delim("dados/2024/CRAS-2024-DADOSGERAIS.csv", 
                                     delim = ";", escape_double = FALSE, locale = locale(encoding = "ISO-8859-1"), 
                                     trim_ws = TRUE)
-  
+
+CRAS_2024_DADOSGERAIS$IBGE_REGIAO <- trunc(CRAS_2024_DADOSGERAIS$IBGE/100000)
+
+
 CRAS_2024_RH <- read_delim("dados/2024/CRAS-2024-RH.csv", 
                           delim = ";", escape_double = FALSE, locale = locale(encoding = "ISO-8859-1"), 
                           trim_ws = TRUE)
@@ -44,14 +74,83 @@ formatarNumeroInteiro(nrow(CRAS_2024_RH))
 
 ```
 
-Quantidade de CRAS por Estado:
-```{r cras-quantidade-cras-estado, echo=FALSE}
 
-dados <- as.data.frame(table(CRAS_2024_DADOSGERAIS$q0_10))
-dados
-ggplot(data = dados, aes(x = Var1, y = Freq)) +
-  geom_text(aes(label = formatarNumeroInteiro(Freq)), vjust = -0.5, size = 2.5) +
-  labs(x = "Estados", y = "Qtd. CRAS", title = "CRAS x Estados") +
-  geom_col() 
+```{r cras-quantidade-cras-regiao, echo=FALSE}
+
+dados <- CRAS_2024_DADOSGERAIS %>% count(codigo_ibge_regiao = trunc(IBGE/100000), name = "length")
+dados <- inner_join(dados, df_regioes, by="codigo_ibge_regiao")
+
+ggplot(data = dados, aes(x = nome_regiao, y = length)) +
+  geom_col() +
+  geom_text(aes(label = formatarNumeroInteiro(length)), vjust = -0.5, size = 2.5) +
+  labs(x = "", y = "Qtd. CRAS", title = "Qtd. CRAS por Região") 
+  
+rm(dados)
 
 ```
+
+
+```{r cras-quantidade-cras-estado, echo=FALSE}
+
+dados <- CRAS_2024_DADOSGERAIS %>% count(q0_10, name = "length")
+
+ggplot(data = dados, aes(x = q0_10, y = length)) +
+  geom_text(aes(label = formatarNumeroInteiro(length)), vjust = -0.5, size = 2.5) +
+  labs(x = "", y = "Qtd. CRAS", title = "Qtd. CRAS por Estado:") +
+  geom_col() 
+
+rm(dados)
+
+```
+```{r cras-uf_qtdprofissionais, echo=FALSE}
+
+dados <- CRAS_2024_RH %>% count(trunc(IBGE/10000), name = "length")
+names(dados) <-c("codigo_ibge_estado","length")
+
+dados <- inner_join(dados, df_estados, by="codigo_ibge_estado")
+
+ggplot(data = dados, aes(x = sigla, y = length)) +
+  geom_text(aes(label = formatarNumeroInteiro(length)), vjust = -0.5, size = 2.5) +
+  labs(x = "", y = "Qtd. Profissionais CRAS", title = "Qtd. Profissionais CRAS:") +
+  geom_col() 
+
+rm(dados)
+
+```
+```{r cras-uf_qtdprofissionais_X_qtdCRAS, echo=FALSE}
+
+dados <- inner_join(CRAS_2024_DADOSGERAIS %>% select(c(NU_IDENTIFICADOR, q0_10)),
+                    CRAS_2024_RH %>% select(NU_IDENTIFICADOR,IBGE),
+                    by="NU_IDENTIFICADOR")
+
+dados <- dados %>%
+          group_by(q0_10) %>%
+          summarise(qtd_cras_rh = n(), qtd_cras = n_distinct(NU_IDENTIFICADOR))
+
+cor_qtdcras_qtdcrasrh <- cor(dados$qtd_cras_rh,dados$qtd_cras)
+
+ggplot(data = dados, aes(x = qtd_cras_rh, y = qtd_cras)) +
+  geom_point() +
+  geom_text(aes(label = q0_10), vjust = 1.5) +
+  labs(
+    title = "Qtd. Profissionais por Qtd. CRAS (UF)",
+    subtitle = paste("Correlação:",cor_qtdcras_qtdcrasrh),
+    y = "Qtd. CRAS",
+    x = "Qtd. Profissionais CRAS"
+  )
+
+ggplot(dados, aes(x = qtd_cras_rh, y = qtd_cras)) +
+  geom_point() + 
+  geom_text(aes(label = q0_10), vjust = 1.5) +
+  geom_smooth(method = "lm") +
+  labs(
+    title = "Regressão Linear - Qtd. Profissionais por Qtd. CRAS (UF)",
+    subtitle = paste("Correlação:",cor_qtdcras_qtdcrasrh),
+    y = "Qtd. CRAS",
+    x = "Qtd. Profissionais CRAS"
+  )
+
+rm(dados,cor_qtdcras_qtdcrasrh)
+
+```
+
