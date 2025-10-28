@@ -12,6 +12,20 @@ knitr::opts_chunk$set(echo = TRUE)
 library("readr")
 library("dplyr")
 library("ggplot2")
+library("digest")
+
+
+hash_sha1_dadosgerais <- digest(
+  file = "dados/2024/CRAS-2024-DADOSGERAIS.csv", 
+  algo = "sha1",       # Define o algoritmo
+  serialize = FALSE    # IMPORTANTE: hash o arquivo bruto, não um objeto R
+)
+
+hash_sha1_rh <- digest(
+  file = "dados/2024/CRAS-2024-RH.csv", 
+  algo = "sha1",       # Define o algoritmo
+  serialize = FALSE    # IMPORTANTE: hash o arquivo bruto, não um objeto R
+)
 
 df_regioes <- data.frame(
   codigo_ibge_regiao =  c(1, 2, 3, 4, 5),
@@ -59,6 +73,15 @@ formatarNumeroInteiro <- function(n){
 ```
 
 ## CENSO SUAS
+
+HASH - SHA-1 CRAS 2024 - Dados Gerais e RH:
+```{r cras-sha1, echo=FALSE}
+
+cat(hash_sha1_dadosgerais)
+cat(hash_sha1_rh)
+
+
+```
 
 Quantidade de CRAS 2024:
 ```{r cras-quantidade, echo=FALSE}
@@ -139,13 +162,17 @@ ggplot(data = dados, aes(x = qtd_cras_rh, y = qtd_cras)) +
     x = "Qtd. Profissionais CRAS"
   )
 
+modelo <- lm(qtd_cras ~ qtd_cras_rh, data = dados)
+coeficientes <- coef(modelo)
+
+
 ggplot(dados, aes(x = qtd_cras_rh, y = qtd_cras)) +
   geom_point() + 
   geom_text(aes(label = q0_10), vjust = 1.5) +
   geom_smooth(method = "lm") +
   labs(
     title = "Regressão Linear - Qtd. Profissionais por Qtd. CRAS (UF)",
-    subtitle = paste("Correlação:",cor_qtdcras_qtdcrasrh),
+    subtitle = paste("Intercept (a):",coeficientes[1], "(b):",coeficientes[2]),
     y = "Qtd. CRAS",
     x = "Qtd. Profissionais CRAS"
   )
@@ -153,4 +180,27 @@ ggplot(dados, aes(x = qtd_cras_rh, y = qtd_cras)) +
 rm(dados,cor_qtdcras_qtdcrasrh)
 
 ```
+```{r cras-mu_qtdprofissionais_X_qtdCRAS, echo=FALSE}
 
+dados <- inner_join(CRAS_2024_DADOSGERAIS %>% select(c(NU_IDENTIFICADOR, q0_10)),
+                    CRAS_2024_RH %>% select(NU_IDENTIFICADOR,IBGE),
+                    by="NU_IDENTIFICADOR")
+
+dados <- dados %>%
+          group_by(IBGE) %>%
+          summarise(qtd_cras_rh = n(), qtd_cras = n_distinct(NU_IDENTIFICADOR))
+
+cor_qtdcras_qtdcrasrh <- cor(dados$qtd_cras_rh,dados$qtd_cras)
+
+ggplot(data = dados, aes(x = qtd_cras_rh, y = qtd_cras)) +
+  geom_point() +
+  labs(
+    title = "Qtd. Profissionais por Qtd. CRAS (Municípios)",
+    subtitle = paste("Correlação:",cor_qtdcras_qtdcrasrh),
+    y = "Qtd. CRAS",
+    x = "Qtd. Profissionais CRAS"
+  )
+
+
+
+```
