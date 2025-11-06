@@ -204,3 +204,21 @@ ggplot(data = dados, aes(x = qtd_cras_rh, y = qtd_cras)) +
 
 
 ```
+```{r cras-q01, echo=FALSE}
+  
+dados <- CRAS_2024_DADOSGERAIS %>%
+          select(c(NU_IDENTIFICADOR,q1)) %>%
+          group_by(q1) %>%
+          summarise(valor = n(), .groups = "drop")
+
+# Gráfico de barras
+ggplot(dados, aes(x = q1, y = valor)) +
+  geom_col() +
+  geom_text(aes(label = formatarNumeroInteiro(valor)), vjust = -0.5, size = 2.5) +
+  labs(title = "Capacidade Referenciada dos CRAS",
+       x = "Capacidade Referenciada",
+       y = "Valor")
+
+
+
+```
