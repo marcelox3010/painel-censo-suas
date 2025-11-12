@@ -137,8 +137,6 @@ ui <- dashboardPage(
       multiple = TRUE
     ),
     
-    verbatimTextOutput(outputId = "debug"),
-    
     tabItems(
       tabItem(
         tabName = "dashboard",
