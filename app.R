@@ -9,9 +9,6 @@ library(dplyr)
 library(ggplot2)
 library(digest)
 
-df_municipios <- read_csv("dados/df-municipios.csv")
-df_municipios <- df_municipios %>% select(uf,nome_uf,nome_municipio)
-
 
 hash_sha1_dadosgerais <- digest(
   file = "dados/2024/CRAS-2024-DADOSGERAIS.csv", 
@@ -48,13 +45,9 @@ df_estados <- data.frame(
 )
 df_estados$codigo_ibge_regiao <- trunc(df_estados$codigo_ibge_estado/10)
 
-
 df_municipios <- read_csv("dados/df-municipios.csv")
 df_municipios <- inner_join(df_municipios,df_estados,c("uf" = "codigo_ibge_estado"))
-df_municipios <- df_municipios %>% mutate(nome_completo = paste0(sigla, "-", nome_municipio, sep = " "))
-
-sort(df_municipios$nome_completo)
-
+df_municipios <- df_municipios %>% mutate(nome_completo = paste0(sigla, "-", nome_municipio, sep = ""))
 
 CRAS_2024_DADOSGERAIS <- read_delim("dados/2024/CRAS-2024-DADOSGERAIS.csv", 
                                     delim = ";", escape_double = FALSE, locale = locale(encoding = "ISO-8859-1"), 
@@ -73,6 +66,45 @@ formatarNumeroInteiro <- function(n){
   
 }
 
+colocaCodigoIBGE <- function(x){
+  
+  sapply(x,function(x){
+    
+    if(grepl("-", x)) df_municipios[df_municipios$nome_completo==x,]$codigo_municipio_completo 
+    else df_estados[df_estados$nome==x,]$codigo_ibge_estado
+      
+  })
+  
+}
+
+qtdCRAS <- function(codigosGeo){
+  
+    if(length(codigosGeo)==0) nrow(CRAS_2024_DADOSGERAIS)
+    else nrow(CRAS_2024_DADOSGERAIS %>%
+                filter(IBGE7 %in% codigosGeo[codigosGeo>100] 
+                       | trunc(IBGE7/100000) %in% codigosGeo[codigosGeo<100]))
+  
+}
+
+qtdProfissionais <- function(codigosGeo){
+  
+  if(length(codigosGeo)==0) nrow(CRAS_2024_RH)
+  else nrow(CRAS_2024_RH %>%
+              filter(IBGE %in% trunc(codigosGeo[codigosGeo>100]/10) 
+                     | trunc(IBGE/10000) %in% codigosGeo[codigosGeo<100]))
+  
+}
+
+filtroGeral <- function(){
+  
+  if(req(input$geo_selecionado)){
+    
+  }
+  
+}
+
+
+
 # ---
 # UI
 # ---
@@ -82,7 +114,7 @@ ui <- dashboardPage(
   
   header = dashboardHeader(
     title = dashboardBrand(
-      title = "Painel Censo SUAS 2024",
+      title = "Censo SUAS 2024 - CRAS",
       href = "#"
     )
   ),
@@ -104,6 +136,8 @@ ui <- dashboardPage(
       choices = c(sort(df_estados$nome), sort(df_municipios$nome_completo)),
       multiple = TRUE
     ),
+    
+    verbatimTextOutput(outputId = "output_formatado"),
     
     tabItems(
       tabItem(
@@ -148,10 +182,17 @@ server <- function(input, output, session) {
     plot(cars, pch = 19)
   })
   
+  output$output_formatado <- renderPrint({
+    
+    req(input$geo_selecionado)
+    paste("Quantidade CRAS:", qtdCRAS(colocaCodigoIBGE(unlist(input$geo_selecionado))))
+    
+  })
+  
   output$vb_qtd_cras <- renderbs4ValueBox({
     
     bs4ValueBox(
-      value = formatarNumeroInteiro(nrow(CRAS_2024_DADOSGERAIS)), 
+      value = formatarNumeroInteiro(qtdCRAS(colocaCodigoIBGE(unlist(input$geo_selecionado)))), 
       subtitle = "Qtd. CRAS",
       icon = icon("users")
     )
@@ -161,7 +202,7 @@ server <- function(input, output, session) {
   output$vb_qtd_cras_rh <- renderbs4ValueBox({
     
     bs4ValueBox(
-      value = formatarNumeroInteiro(nrow(CRAS_2024_RH)),
+      value = formatarNumeroInteiro(qtdProfissionais(colocaCodigoIBGE(unlist(input$geo_selecionado)))),
       subtitle = "Qtd. Profissionais CRAS",
       icon = icon("users")
     )
