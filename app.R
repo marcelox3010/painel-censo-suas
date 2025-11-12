@@ -137,7 +137,7 @@ ui <- dashboardPage(
       multiple = TRUE
     ),
     
-    verbatimTextOutput(outputId = "output_formatado"),
+    verbatimTextOutput(outputId = "debug"),
     
     tabItems(
       tabItem(
@@ -162,10 +162,18 @@ ui <- dashboardPage(
       tabItem(
         tabName = "sobre",
         fluidRow(
-         "Painel não oficial do Censo SUAS 2024", br(),
-         "Arquivos originais baixados em: http://aplicacoes.mds.gov.br/sagi/snas/vigilancia/index2.php", br(),
-         paste("HASH Dados Gerais",hash_sha1_dadosgerais),br(),
-         paste("HASH RH",hash_sha1_rh)
+         p("Painel não oficial do Censo SUAS 2024"),  
+         p("Arquivos originais baixados em: http://aplicacoes.mds.gov.br/sagi/snas/vigilancia/index2.php"), 
+         p(paste("HASH Dados Gerais",
+                 hash_sha1_dadosgerais,
+                 tags$br(),
+                 paste("HASH RH",hash_sha1_rh))), 
+         
+         p("Download do questionários CRAS 2024:"),
+         a("clique aqui", 
+           href = "https://paineis.gadelha.pro/censosuas/questinario/CensoSUAS_2024_CRAS.pdf", 
+           target = "_blank")
+         
         )
       )
     )
@@ -180,13 +188,6 @@ server <- function(input, output, session) {
 
   output$grafico <- renderPlot({
     plot(cars, pch = 19)
-  })
-  
-  output$output_formatado <- renderPrint({
-    
-    req(input$geo_selecionado)
-    paste("Quantidade CRAS:", qtdCRAS(colocaCodigoIBGE(unlist(input$geo_selecionado))))
-    
   })
   
   output$vb_qtd_cras <- renderbs4ValueBox({
