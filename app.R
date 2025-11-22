@@ -8,6 +8,7 @@ library(readr)
 library(dplyr)
 library(ggplot2)
 library(digest)
+library(DT)
 
 
 hash_sha1_dadosgerais <- digest(
@@ -103,8 +104,6 @@ filtroGeral <- function(){
   
 }
 
-
-
 # ---
 # UI
 # ---
@@ -144,6 +143,11 @@ ui <- dashboardPage(
           
           bs4ValueBoxOutput(outputId = "vb_qtd_cras"),
           bs4ValueBoxOutput(outputId = "vb_qtd_cras_rh")
+          
+        ),
+        fluidRow(
+          
+          DTOutput("lista_cras")
           
         )
       ),
@@ -206,6 +210,52 @@ server <- function(input, output, session) {
       icon = icon("users")
     )
     
+  })
+  
+  output$lista_cras <- renderDT({
+    
+    if(length(unlist(input$geo_selecionado)) == 0) t1 <- CRAS_2024_DADOSGERAIS
+    else t1 <- CRAS_2024_DADOSGERAIS %>% 
+        
+                filter(
+                  
+                  IBGE %in% trunc(colocaCodigoIBGE(unlist(input$geo_selecionado))/10) |
+                  trunc(IBGE/10000) %in% colocaCodigoIBGE(unlist(input$geo_selecionado))
+                  
+                )
+    
+    t1 <- 
+      
+      t1 %>%
+    
+        select("NU_IDENTIFICADOR",
+               Nome="q0_1",
+               "q0_2",
+               "q0_3",
+               "q0_4",
+               "q0_5",
+               "q0_6",
+               "q0_7",
+               "q0_8",
+               "q0_9",
+               "q0_10",
+               "q0_11",
+               "q0_12",
+               "q0_13") %>%
+        
+        mutate(Município=paste0(q0_9,"-",q0_10),
+                Endereço=paste(q0_2,q0_3,q0_4,q0_5,q0_6,q0_7,q0_8,q0_11),
+                email=q0_11,
+                telefone=q0_12) %>%
+        
+        select(-c(q0_2,q0_3,q0_4,q0_5,q0_6,q0_7,q0_8,q0_9,q0_10,q0_11,q0_12,q0_13))
+      
+    
+    
+    datatable(t1, 
+              options = list(pageLength = 100)) # Mostra 5 linhas por página
+    
+  
   })
   
 }
